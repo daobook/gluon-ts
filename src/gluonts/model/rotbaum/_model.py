@@ -49,13 +49,10 @@ class QuantileReg:
         from lightgbm import LGBMRegressor
 
         self.quantiles = quantiles
-        self.models = dict(
-            (
-                quantile,
-                LGBMRegressor(objective="quantile", alpha=quantile, **params),
-            )
+        self.models = {
+            quantile: LGBMRegressor(objective="quantile", alpha=quantile, **params)
             for quantile in quantiles
-        )
+        }
 
     def fit(self, x_train, y_train):
         for model in self.models.values():
@@ -154,24 +151,23 @@ class QRX:
         if not x_train_is_dataframe:
             x_train, y_train = np.array(x_train), np.array(y_train)  # xgboost
         # doens't like lists
-        if max_sample_size and x_train_is_dataframe:
-            assert max_sample_size > 0
+        if max_sample_size:
             sample_size = min(max_sample_size, len(x_train))
-            x_train = x_train.sample(
-                n=min(sample_size, len(x_train)),
-                replace=False,
-                random_state=seed,
-            )
-            y_train = y_train[x_train.index]
-        elif max_sample_size:
             assert max_sample_size > 0
-            sample_size = min(max_sample_size, len(x_train))
-            np.random.seed(seed)
-            idx = np.random.choice(
-                np.arange(len(x_train)), sample_size, replace=False
-            )
-            x_train = x_train[idx]
-            y_train = y_train[idx]
+            if x_train_is_dataframe:
+                x_train = x_train.sample(
+                    n=min(sample_size, len(x_train)),
+                    replace=False,
+                    random_state=seed,
+                )
+                y_train = y_train[x_train.index]
+            else:
+                np.random.seed(seed)
+                idx = np.random.choice(
+                    np.arange(len(x_train)), sample_size, replace=False
+                )
+                x_train = x_train[idx]
+                y_train = y_train[idx]
         if not model_is_already_trained:
             self.model.fit(x_train, y_train, **kwargs)
         y_train_pred = self.model.predict(x_train)
@@ -302,18 +298,17 @@ class QRX:
         assert sorted_list
         if len(sorted_list) == 1:
             return sorted_list[0]
+        halfway_indx = (len(sorted_list) - 1) // 2
+        if sorted_list[halfway_indx] > num:
+            return cls.get_closest_pt(sorted_list[: halfway_indx + 1], num)
+        elif sorted_list[halfway_indx + 1] < num:
+            return cls.get_closest_pt(sorted_list[halfway_indx + 1 :], num)
+        elif abs(sorted_list[halfway_indx] - num) < abs(
+            sorted_list[halfway_indx + 1] - num
+        ):
+            return sorted_list[halfway_indx]
         else:
-            halfway_indx = (len(sorted_list) - 1) // 2
-            if sorted_list[halfway_indx] > num:
-                return cls.get_closest_pt(sorted_list[: halfway_indx + 1], num)
-            elif sorted_list[halfway_indx + 1] < num:
-                return cls.get_closest_pt(sorted_list[halfway_indx + 1 :], num)
-            elif abs(sorted_list[halfway_indx] - num) < abs(
-                sorted_list[halfway_indx + 1] - num
-            ):
-                return sorted_list[halfway_indx]
-            else:
-                return sorted_list[halfway_indx + 1]
+            return sorted_list[halfway_indx + 1]
 
     def _get_and_cache_quantile_computation(
         self, feature_vector_in_train: List, quantile: float

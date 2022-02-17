@@ -123,10 +123,8 @@ class SNDense(mx.gluon.HybridBlock):
         shape = self._weight.shape
         return s.format(
             name=self.__class__.__name__,
-            act=self._act if self._act else "linear",
-            layout="{0} -> {1}".format(
-                shape[1] if shape[1] else None, shape[0]
-            ),
+            act=self._act or "linear",
+            layout="{0} -> {1}".format(shape[1] or None, shape[0]),
         )
 
     def _spectral_norm(self, weight: Tensor, u: Tensor) -> Tensor:

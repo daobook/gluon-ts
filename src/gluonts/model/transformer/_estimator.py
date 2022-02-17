@@ -173,8 +173,9 @@ class TransformerEstimator(GluonEstimator):
             cardinality is not None or not use_feat_static_cat
         ), "You must set `cardinality` if `use_feat_static_cat=True`"
         assert cardinality is None or all(
-            [c > 0 for c in cardinality]
+            c > 0 for c in cardinality
         ), "Elements of `cardinality` should be > 0"
+
         assert (
             embedding_dimension > 0
         ), "The value of `embedding_dimension` should be > 0"
@@ -288,7 +289,7 @@ class TransformerEstimator(GluonEstimator):
         )
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,

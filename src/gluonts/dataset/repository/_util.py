@@ -26,11 +26,7 @@ def to_dict(
     item_id: Optional[Any] = None,
 ):
     def serialize(x):
-        if np.isnan(x):
-            return "NaN"
-        else:
-            # return x
-            return float("{0:.6f}".format(float(x)))
+        return "NaN" if np.isnan(x) else float("{0:.6f}".format(float(x)))
 
     res = {
         "start": str(start),

@@ -59,10 +59,7 @@ class Timestamp(pd.Timestamp):
     @classmethod
     def __get_validators__(cls):
         def conv(val):
-            if isinstance(val, pd.Timestamp):
-                return val
-            else:
-                return pd.Timestamp(val)
+            return val if isinstance(val, pd.Timestamp) else pd.Timestamp(val)
 
         yield conv
 

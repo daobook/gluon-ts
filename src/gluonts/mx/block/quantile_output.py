@@ -57,11 +57,7 @@ class QuantileLoss(Loss):
         self.num_quantiles = len(quantiles)
         self.is_equal_weights = is_equal_weights
 
-        self.quantile_weights = (
-            quantile_weights
-            if quantile_weights
-            else self.compute_quantile_weights()
-        )
+        self.quantile_weights = quantile_weights or self.compute_quantile_weights()
 
     # noinspection PyMethodOverriding
     def hybrid_forward(
@@ -144,9 +140,7 @@ class QuantileLoss(Loss):
         under_bias = p * F.maximum(y_true - y_pred_p, 0)
         over_bias = (1 - p) * F.maximum(y_pred_p - y_true, 0)
 
-        qt_loss = 2 * (under_bias + over_bias)
-
-        return qt_loss
+        return 2 * (under_bias + over_bias)
 
     def compute_quantile_weights(self) -> List:
         """
@@ -167,11 +161,11 @@ class QuantileLoss(Loss):
             self.num_quantiles >= 0
         ), f"invalid num_quantiles: {self.num_quantiles}"
         if self.num_quantiles == 0:  # edge case
-            quantile_weights = []
+            return []
         elif self.is_equal_weights or self.num_quantiles == 1:
-            quantile_weights = [1.0 / self.num_quantiles] * self.num_quantiles
+            return [1.0 / self.num_quantiles] * self.num_quantiles
         else:
-            quantile_weights = (
+            return (
                 [0.5 * (self.quantiles[1] - self.quantiles[0])]
                 + [
                     0.5 * (self.quantiles[i + 1] - self.quantiles[i - 1])
@@ -179,7 +173,6 @@ class QuantileLoss(Loss):
                 ]
                 + [0.5 * (self.quantiles[-1] - self.quantiles[-2])]
             )
-        return quantile_weights
 
 
 class ProjectParams(nn.HybridBlock):
@@ -278,7 +271,7 @@ class QuantileOutput:
         self.num_quantiles = len(self.quantiles)
         self.quantile_weights = quantile_weights
         self.is_iqf = is_iqf
-        self.is_equal_weights = False if self.is_iqf else True
+        self.is_equal_weights = not self.is_iqf
 
     def get_loss(self) -> nn.HybridBlock:
         """

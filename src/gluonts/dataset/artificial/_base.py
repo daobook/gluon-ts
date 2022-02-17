@@ -192,26 +192,28 @@ class ConstantDataset(ArtificialDataset):
         if self.is_trend:
             recipe_type += LinearTrend()
         if self.is_promotions:
-            recipe.append(
-                ("binary_causal", BinaryMarkovChain(one_to_zero, zero_to_one))
+            recipe.extend(
+                (
+                    ("binary_causal", BinaryMarkovChain(one_to_zero, zero_to_one)),
+                    (FieldName.FEAT_DYNAMIC_REAL, Stack(["binary_causal"])),
+                )
             )
-            recipe.append(
-                (FieldName.FEAT_DYNAMIC_REAL, Stack(["binary_causal"]))
-            )
+
             recipe_type += scale_features * Lag("binary_causal", lag=0)
         if self.holidays:
             timestamp = self.init_date()
             # Compute dates array
             dates = []
-            for i in range(num_steps):
+            for _ in range(num_steps):
                 dates.append(timestamp)
                 timestamp += 1
-            recipe.append(
-                ("binary_holidays", BinaryHolidays(dates, self.holidays))
+            recipe.extend(
+                (
+                    ("binary_holidays", BinaryHolidays(dates, self.holidays)),
+                    (FieldName.FEAT_DYNAMIC_REAL, Stack(["binary_holidays"])),
+                )
             )
-            recipe.append(
-                (FieldName.FEAT_DYNAMIC_REAL, Stack(["binary_holidays"]))
-            )
+
             recipe_type += scale_features * Lag("binary_holidays", lag=0)
         recipe.append((FieldName.TARGET, recipe_type))
         max_train_length = num_steps - self.prediction_length
@@ -222,8 +224,7 @@ class ConstantDataset(ArtificialDataset):
             prediction_length=self.prediction_length,
             num_timeseries=1,  # Add 1 time series at a time in the loop for different constant valus per time series
         )
-        generated = data.generate()
-        return generated
+        return data.generate()
 
     def piecewise_constant(self, index: int, num_steps: int) -> List:
         target = []

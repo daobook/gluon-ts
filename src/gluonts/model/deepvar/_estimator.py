@@ -107,10 +107,9 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
 
     assert granularity in features, f"freq {granularity} not supported"
 
-    feature_classes: List[TimeFeature] = [
+    return [
         FourierDateFeatures(freq=freq) for freq in features[granularity]
     ]
-    return feature_classes
 
 
 def get_lags_for_frequency(
@@ -132,7 +131,7 @@ def get_lags_for_frequency(
         lags = [[1]]
 
     # use less lags
-    output_lags = list([int(lag) for sub_list in lags for lag in sub_list])
+    output_lags = [int(lag) for sub_list in lags for lag in sub_list]
     output_lags = sorted(list(set(output_lags)))
     return output_lags[:num_lags]
 
@@ -257,8 +256,9 @@ class DeepVAREstimator(GluonEstimator):
         ), "The value of `num_eval_samples` should be > 0"
         assert dropout_rate >= 0, "The value of `dropout_rate` should be >= 0"
         assert all(
-            [c > 0 for c in cardinality]
+            c > 0 for c in cardinality
         ), "Elements of `cardinality` should be > 0"
+
         assert (
             embedding_dimension > 0
         ), "The value of `embedding_dimension` should be > 0"
@@ -368,7 +368,7 @@ class DeepVAREstimator(GluonEstimator):
         )
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,

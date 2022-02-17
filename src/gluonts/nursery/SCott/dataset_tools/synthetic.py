@@ -22,15 +22,11 @@ def _get_mixed_pattern(x, pattern):
 
 
 def get_mixed_pattern(unit_length=16, num_duplicates=1000):
+    dataset_group = [[] for _ in range(16)]
     freq = "1H"
     context_length = 3 * unit_length
     prediction_length = unit_length
     len_sample = context_length + prediction_length
-
-    dataset_group = [[] for j in range(16)]
-    whole_data = []
-    val_data = []
-    ret = dict()
     start = pd.Timestamp("01-01-2000", freq=freq)
     patterns = [
         ["sin", "linear", "quadratic", "sqrt"],
@@ -39,6 +35,8 @@ def get_mixed_pattern(unit_length=16, num_duplicates=1000):
         ["quadratic", "sin", "sqrt", "linear"],
     ]
     pattern_number = 4
+    whole_data = []
+    val_data = []
     for m, pattern in enumerate(patterns):
         for gid in range(pattern_number):
             for j in range(num_duplicates):
@@ -74,7 +72,7 @@ def get_mixed_pattern(unit_length=16, num_duplicates=1000):
                 )
     print(len(whole_data))
     print(len(val_data))
-    ret["group_ratio"] = [len(i) / len(whole_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(whole_data) for i in dataset_group]}
     print(ret["group_ratio"])
     random.shuffle(whole_data)
     group_data = []

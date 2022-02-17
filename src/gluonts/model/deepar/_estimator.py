@@ -212,11 +212,13 @@ class DeepAREstimator(GluonEstimator):
         ), f"`dropoutcell_type` should be one of {supported_dropoutcell_types}"
         assert dropout_rate >= 0, "The value of `dropout_rate` should be >= 0"
         assert cardinality is None or all(
-            [c > 0 for c in cardinality]
+            c > 0 for c in cardinality
         ), "Elements of `cardinality` should be > 0"
+
         assert embedding_dimension is None or all(
-            [e > 0 for e in embedding_dimension]
+            e > 0 for e in embedding_dimension
         ), "Elements of `embedding_dimension` should be > 0"
+
         assert (
             num_parallel_samples > 0
         ), "The value of `num_parallel_samples` should be > 0"
@@ -371,7 +373,7 @@ class DeepAREstimator(GluonEstimator):
         )
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,

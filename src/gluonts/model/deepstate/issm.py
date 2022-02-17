@@ -81,14 +81,11 @@ def _make_2_block_diagonal(F, left: Tensor, right: Tensor) -> Tensor:
     # shape (batch_size, n, m)
     zeros_off_diag_tr = zeros_off_diag.swapaxes(2, 3)
 
-    # block diagonal: shape (batch_size, seq_length, m+n, m+n)
-    _block_diagonal = F.concat(
+    return F.concat(
         F.concat(left, zeros_off_diag, dim=3),
         F.concat(zeros_off_diag_tr, right, dim=3),
         dim=2,
     )
-
-    return _block_diagonal
 
 
 class ISSM:
@@ -276,13 +273,11 @@ class CompositeISSM(ISSM):
     ) -> None:
         super(CompositeISSM, self).__init__()
         self.seasonal_issms = seasonal_issms
-        self.nonseasonal_issm = (
-            LevelISSM() if add_trend is False else LevelTrendISSM()
-        )
+        self.nonseasonal_issm = LevelISSM() if not add_trend else LevelTrendISSM()
 
     def latent_dim(self) -> int:
         return (
-            sum([issm.latent_dim() for issm in self.seasonal_issms])
+            sum(issm.latent_dim() for issm in self.seasonal_issms)
             + self.nonseasonal_issm.latent_dim()
         )
 

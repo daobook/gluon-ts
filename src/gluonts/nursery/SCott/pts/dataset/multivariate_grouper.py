@@ -109,11 +109,11 @@ class MultivariateGrouper:
         )
 
     def _group_all(self, dataset: Dataset) -> Dataset:
-        if self.num_test_dates is None:
-            grouped_dataset = self._prepare_train_data(dataset)
-        else:
-            grouped_dataset = self._prepare_test_data(dataset)
-        return grouped_dataset
+        return (
+            self._prepare_train_data(dataset)
+            if self.num_test_dates is None
+            else self._prepare_test_data(dataset)
+        )
 
     def _prepare_train_data(self, dataset: Dataset) -> ListDataset:
         logging.info("group training time-series to datasets")
@@ -137,9 +137,9 @@ class MultivariateGrouper:
             grouped_data[FieldName.TARGET], self.num_test_dates
         )
 
-        all_entries = list()
+        all_entries = []
         for dataset_at_test_date in split_dataset:
-            grouped_data = dict()
+            grouped_data = {}
             grouped_data[FieldName.TARGET] = np.array(
                 list(dataset_at_test_date), dtype=np.float32
             )

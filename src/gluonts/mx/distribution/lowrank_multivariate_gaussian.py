@@ -157,11 +157,9 @@ def lowrank_log_likelihood(
             axis=-1
         )
 
-    ll: Tensor = -0.5 * (
+    return -0.5 * (
         F.broadcast_add(dim_factor, log_det_factor) + mahalanobis_factor
     )
-
-    return ll
 
 
 class LowrankMultivariateGaussian(Distribution):
@@ -302,11 +300,9 @@ class LowrankMultivariateGaussian(Distribution):
                     W, samples_W.expand_dims(axis=-1)
                 ).squeeze(axis=-1)
 
-                samples = mu + cov_D + cov_W
+                return mu + cov_D + cov_W
             else:
-                samples = mu + cov_D
-
-            return samples
+                return mu + cov_D
 
         return _sample_multiple(
             s, mu=self.mu, D=self.D, W=self.W, num_samples=num_samples
@@ -341,11 +337,7 @@ class LowrankMultivariateGaussian(Distribution):
 
 
 def inv_softplus(y):
-    if y < 20.0:
-        # y = log(1 + exp(x))  ==>  x = log(exp(y) - 1)
-        return np.log(np.exp(y) - 1)
-    else:
-        return y
+    return np.log(np.exp(y) - 1) if y < 20.0 else y
 
 
 class LowrankMultivariateGaussianOutput(DistributionOutput):
@@ -422,15 +414,14 @@ class LowrankMultivariateGaussianOutput(DistributionOutput):
 
         if self.rank == 0:
             return mu_vector + self.mu_bias, D_diag
-        else:
-            assert (
-                W_vector is not None
-            ), "W_vector cannot be None if rank is not zero!"
-            # reshape from vector form (..., d * rank) to matrix form (..., d, rank)
-            W_matrix = W_vector.reshape(
-                (-2, self.dim, self.rank, -4), reverse=1
-            )
-            return mu_vector + self.mu_bias, D_diag, W_matrix
+        assert (
+            W_vector is not None
+        ), "W_vector cannot be None if rank is not zero!"
+        # reshape from vector form (..., d * rank) to matrix form (..., d, rank)
+        W_matrix = W_vector.reshape(
+            (-2, self.dim, self.rank, -4), reverse=1
+        )
+        return mu_vector + self.mu_bias, D_diag, W_matrix
 
     @property
     def event_shape(self) -> Tuple:

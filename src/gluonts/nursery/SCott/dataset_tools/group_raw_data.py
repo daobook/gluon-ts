@@ -18,9 +18,7 @@ def get_m4_by_freq(
     num_groups=6,
     file_name="m4_freq",
 ):
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     datasets_name = [
         "m4_hourly",
         "m4_daily",
@@ -37,11 +35,12 @@ def get_m4_by_freq(
         24 * 7 * 30 * 3,
         24 * 7 * 30 * 3 * 4,
     ]
+    whole_data = []
     for i in range(num_groups):
         dataset = get_dataset(datasets_name[i])
         len_sample = context_length + prediction_length
         it = iter(dataset.train)
-        for j in range(num_ts):
+        for _ in range(num_ts):
             train_entry = next(it)
             unsplit_ts = train_entry["target"]
             # unsplit_start = train_entry['start']
@@ -78,7 +77,7 @@ def get_m4_by_freq(
     #    print(len(dataset_group[i]))
     # import pdb;pdb.set_trace()
     print(len(whole_data))
-    ret["group_ratio"] = [len(i) / len(whole_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(whole_data) for i in dataset_group]}
     print(ret["group_ratio"])
     random.shuffle(whole_data)
     ret["whole_data"] = ListDataset(whole_data, freq=dataset.metadata.freq)
@@ -88,10 +87,10 @@ def get_m4_by_freq(
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
     print("write whole data")
-    with open("synthetic_" + file_name + "_whole_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_whole_data.csv', "wb") as output:
         pickle.dump(ret["whole_data"], output)
     print("write group data")
-    with open("synthetic_" + file_name + "_group_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_group_data.csv', "wb") as output:
         pickle.dump(ret, output)
     return True
 
@@ -100,6 +99,8 @@ def get_temperature_data(
     context_length=24, prediction_length=4, samples_per_ts=2000, num_groups=8
 ):
     ts_file = pd.read_csv("temperature.csv")
+    datetime = ts_file["datetime"]
+    dataset_group = [[] for _ in range(num_groups)]
     city_names = [
         "Vancouver",
         "Los Angeles",
@@ -110,10 +111,7 @@ def get_temperature_data(
         "Boston",
         "Haifa",
     ]
-    datetime = ts_file["datetime"]
-    dataset_group = [[] for i in range(num_groups)]
     whole_data = []
-    ret = dict()
     for gid in range(num_groups):
         ts = ts_file[city_names[gid]]
         num_samples = 0
@@ -142,7 +140,7 @@ def get_temperature_data(
             if num_samples == samples_per_ts:
                 break
     random.shuffle(whole_data)
-    ret["whole_data"] = ListDataset(whole_data, freq="1H")
+    ret = {'whole_data': ListDataset(whole_data, freq="1H")}
     group_data_list = []
     for group in dataset_group:
         random.shuffle(group)
@@ -159,9 +157,7 @@ def get_temperature_data(
 
 def get_amazon_sales():
     f = open("./dataset/sgc_train.json", "r", encoding="utf-8")
-    dataset_group = [[] for i in range(8)]
-    whole_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(8)]
     X = []
     Y = []
     # split_grid = [0.04, 0.1, 0.25, 0.5, 1, 10, 100, 5000]
@@ -180,13 +176,14 @@ def get_amazon_sales():
         X.append((ts, var))
     X = sorted(X, key=lambda x: x[1])
     X = [x[0] for x in X]
-    length = int(len(X) / 8)
+    length = len(X) // 8
+    whole_data = []
     for gid in range(8):
         for j in range(gid * length, (gid + 1) * length):
             whole_data.append({"target": X[j], "start": start})
             dataset_group[gid].append({"target": X[j], "start": start})
     random.shuffle(whole_data)
-    ret["whole_data"] = ListDataset(whole_data, freq="1H")
+    ret = {'whole_data': ListDataset(whole_data, freq="1H")}
     group_list = []
     for group in dataset_group:
         random.shuffle(group)
@@ -203,19 +200,18 @@ def get_amazon_sales():
 
 def get_group_data_by_var(name, num_groups, len_sample=9):
     dataset = get_dataset(name)
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data = []
-    ret = []
+    dataset_group = [[] for _ in range(num_groups)]
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
     group_boundary = [1e3, 5e3, 1e4, 5e4, 1e5, 5e5]
-    for i in range(num_ts):
+    group_id = 0
+    whole_data = []
+    for _ in range(num_ts):
         train_entry = next(it)
-        unsplit_ts = train_entry["target"][0:800]
+        unsplit_ts = train_entry["target"][:800]
         unsplit_start = train_entry["start"]
         whole_data.append({"target": unsplit_ts, "start": unsplit_start})
         for ts_sample_start in range(len(unsplit_ts) - len_sample):
-            group_id = 0
             print(
                 torch.var(
                     torch.FloatTensor(
@@ -226,21 +222,12 @@ def get_group_data_by_var(name, num_groups, len_sample=9):
                 )
             )
             continue
-            dataset_group[group_id].append(
-                {
-                    "target": unsplit_ts[
-                        ts_sample_start : ts_sample_start + len_sample
-                    ],
-                    "start": unsplit_start,
-                }
-            )
-            unsplit_start += pd.Timedelta(hours=1)
     import pdb
 
     pdb.set_trace()
     random.shuffle(whole_data)
     print("append once")
-    ret.append(ListDataset(whole_data, freq=dataset.metadata.freq))
+    ret = [ListDataset(whole_data, freq=dataset.metadata.freq)]
     print("append twice")
     ret.append(ListDataset(whole_data, freq=dataset.metadata.freq))
     print("append data")
@@ -249,7 +236,7 @@ def get_group_data_by_var(name, num_groups, len_sample=9):
         ret.append(ListDataset(group, freq=dataset.metadata.freq))
     print("write whole data")
     with open("synthetic_traffic_time_whole_data.csv", "wb") as output:
-        pickle.dump(ret[0:2], output)
+        pickle.dump(ret[:2], output)
     print("write group data")
     with open("synthetic_traffic_time_group_data.csv", "wb") as output:
         pickle.dump(ret, output)
@@ -258,11 +245,10 @@ def get_group_data_by_var(name, num_groups, len_sample=9):
 
 def get_group_data_by_hash(name, q, num_groups):
     dataset = get_dataset(name)
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data = []
-    ret = []
+    dataset_group = [[] for _ in range(num_groups)]
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
+    whole_data = []
     for i in range(num_ts):
         train_entry = next(it)
         dataset_group[i % num_groups].append(
@@ -272,26 +258,28 @@ def get_group_data_by_hash(name, q, num_groups):
             {"target": train_entry["target"], "start": train_entry["start"]}
         )
     random.shuffle(whole_data)
-    ret.append(ListDataset(whole_data, freq=dataset.metadata.freq))
-    for group in dataset_group:
-        ret.append(ListDataset(group, freq=dataset.metadata.freq))
+    ret = [ListDataset(whole_data, freq=dataset.metadata.freq)]
+    ret.extend(
+        ListDataset(group, freq=dataset.metadata.freq)
+        for group in dataset_group
+    )
+
     return ret, dataset.metadata.freq
 
 
 def get_group_data_by_duplicate(name, num_duplicates, num_groups):
     dataset = get_dataset(name)
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data_list = []
-    no_duplicate_whole_data_list = []
-    ret = []
+    dataset_group = [[] for _ in range(num_groups)]
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
+    whole_data_list = []
+    no_duplicate_whole_data_list = []
     for i in range(num_ts):
         train_entry = next(it)
         no_duplicate_whole_data_list.append(
             {"target": train_entry["target"], "start": train_entry["start"]}
         )
-        for j in range(num_duplicates):
+        for _ in range(num_duplicates):
             dataset_group[i % num_groups].append(
                 {
                     "target": train_entry["target"],
@@ -306,10 +294,15 @@ def get_group_data_by_duplicate(name, num_duplicates, num_groups):
             )
     random.shuffle(whole_data_list)
     random.shuffle(no_duplicate_whole_data_list)
-    ret.append(
-        ListDataset(no_duplicate_whole_data_list, freq=dataset.metadata.freq)
+    ret = list(
+        (
+            ListDataset(
+                no_duplicate_whole_data_list, freq=dataset.metadata.freq
+            ),
+            ListDataset(whole_data_list, freq=dataset.metadata.freq),
+        )
     )
-    ret.append(ListDataset(whole_data_list, freq=dataset.metadata.freq))
+
     for group in dataset_group:
         random.shuffle(group)
         ret.append(ListDataset(group, freq=dataset.metadata.freq))
@@ -318,29 +311,30 @@ def get_group_data_by_duplicate(name, num_duplicates, num_groups):
 
 def get_whole_data_by_duplicate(name, num_duplicates):
     dataset = get_dataset(name)
-    dataset_group = []
-    ret = []
     no_duplicate_whole_data_list = []
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
-    for i in range(num_ts):
+    dataset_group = []
+    for _ in range(num_ts):
         train_entry = next(it)
         no_duplicate_whole_data_list.append(
             {"target": train_entry["target"], "start": train_entry["start"]}
         )
-        for j in range(num_duplicates):
-            dataset_group.append(
-                {
+        dataset_group.extend({
                     "target": train_entry["target"],
                     "start": train_entry["start"],
-                }
-            )
+                } for _ in range(num_duplicates))
     random.shuffle(dataset_group)
     random.shuffle(no_duplicate_whole_data_list)
-    ret.append(
-        ListDataset(no_duplicate_whole_data_list, freq=dataset.metadata.freq)
+    ret = list(
+        (
+            ListDataset(
+                no_duplicate_whole_data_list, freq=dataset.metadata.freq
+            ),
+            ListDataset(dataset_group, freq=dataset.metadata.freq),
+        )
     )
-    ret.append(ListDataset(dataset_group, freq=dataset.metadata.freq))
+
     return ret, dataset.metadata.freq
 
 
@@ -349,7 +343,7 @@ def get_group_data(name):
     dataset_group = []
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
-    for i in range(num_ts):
+    for _ in range(num_ts):
         train_entry = next(it)
         dataset_group.append(
             ListDataset(
@@ -370,7 +364,7 @@ def get_whole_data(name):
     dataset_group = []
     it = iter(dataset.train)
     num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
-    for i in range(num_ts):
+    for _ in range(num_ts):
         train_entry = next(it)
         dataset_group.append(
             {"target": train_entry["target"], "start": train_entry["start"]}
@@ -400,7 +394,7 @@ def get_synthetic_data(model_name=None, num_groups=8, mean_boundary=1):
         for p in net.parameters():
             p.data = torch.normal(parameter_mean, 0.1, size=p.data.shape)
         ts = torch.normal(0, 0.1, size=(1, context_length))
-        for num_ts in range(num_time_steps):
+        for _ in range(num_time_steps):
             ts_slice = torch.Tensor(ts[0][-context_length:]).view(
                 1, context_length
             )
@@ -450,7 +444,7 @@ def get_synthetic_data_mlp(
     dataset_group = []
     whole_data_list = []
     start = pd.Timestamp("01-01-2019", freq="1H")
-    for gid in range(num_groups):
+    for _ in range(num_groups):
         net = SimpleFeedForwardEstimator(
             freq="1H",
             prediction_length=prediction_length,
@@ -474,7 +468,7 @@ def get_synthetic_data_mlp(
         ts = ts.view(
             len(ts[0]),
         )  # [context_length:]
-        for j in range(num_duplicates):
+        for _ in range(num_duplicates):
             ts_sample = ts + torch.normal(0, 0.1, size=ts.shape)
             whole_data_list.append({"target": ts_sample, "start": start})
             pattern_group.append({"target": ts_sample, "start": start})
@@ -482,9 +476,7 @@ def get_synthetic_data_mlp(
     random.shuffle(whole_data_list)
     random.shuffle(dataset_group)
     dataset = ListDataset(whole_data_list, freq="1H")
-    ret = []
-    ret.append(dataset)
-    ret.append(dataset)
+    ret = [dataset, dataset]
     dataset_group = [dataset] + dataset_group
     dataset_group = [dataset] + dataset_group
 

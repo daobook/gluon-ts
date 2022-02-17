@@ -61,9 +61,7 @@ from ._transform import BroadcastTo, TFTInstanceSplitter
 
 
 def _default_feat_args(dims_or_cardinalities: List[int]):
-    if dims_or_cardinalities:
-        return dims_or_cardinalities
-    return [1]
+    return dims_or_cardinalities or [1]
 
 
 class TemporalFusionTransformerEstimator(GluonEstimator):
@@ -269,24 +267,25 @@ class TemporalFusionTransformerEstimator(GluonEstimator):
         if self.past_dynamic_cardinalities:
             transforms.append(
                 VstackFeatures(
-                    output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
+                    output_field=f'{FieldName.PAST_FEAT_DYNAMIC}_cat',
                     input_fields=list(self.past_dynamic_cardinalities.keys()),
                 )
             )
+
         else:
             transforms.extend(
                 [
                     SetField(
-                        output_field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
+                        output_field=f'{FieldName.PAST_FEAT_DYNAMIC}_cat',
                         value=[[0.0]],
                     ),
                     AsNumpyArray(
-                        field=FieldName.PAST_FEAT_DYNAMIC + "_cat",
-                        expected_ndim=2,
+                        field=f'{FieldName.PAST_FEAT_DYNAMIC}_cat', expected_ndim=2
                     ),
-                    BroadcastTo(field=FieldName.PAST_FEAT_DYNAMIC + "_cat"),
+                    BroadcastTo(field=f'{FieldName.PAST_FEAT_DYNAMIC}_cat'),
                 ]
             )
+
 
         if self.past_dynamic_feature_dims:
             transforms.append(
@@ -312,7 +311,7 @@ class TemporalFusionTransformerEstimator(GluonEstimator):
         return Chain(transforms)
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,
@@ -322,9 +321,10 @@ class TemporalFusionTransformerEstimator(GluonEstimator):
 
         ts_fields = [FieldName.FEAT_DYNAMIC_CAT, FieldName.FEAT_DYNAMIC_REAL]
         past_ts_fields = [
-            FieldName.PAST_FEAT_DYNAMIC + "_cat",
+            f'{FieldName.PAST_FEAT_DYNAMIC}_cat',
             FieldName.PAST_FEAT_DYNAMIC_REAL,
         ]
+
 
         return TFTInstanceSplitter(
             instance_sampler=instance_sampler,
@@ -373,7 +373,7 @@ class TemporalFusionTransformerEstimator(GluonEstimator):
     def create_training_network(
         self,
     ) -> TemporalFusionTransformerTrainingNetwork:
-        network = TemporalFusionTransformerTrainingNetwork(
+        return TemporalFusionTransformerTrainingNetwork(
             context_length=self.context_length,
             prediction_length=self.prediction_length,
             d_var=self.variable_dim,
@@ -401,7 +401,6 @@ class TemporalFusionTransformerEstimator(GluonEstimator):
             ),
             dropout=self.dropout_rate,
         )
-        return network
 
     def create_predictor(
         self, transformation: Transformation, trained_network: HybridBlock

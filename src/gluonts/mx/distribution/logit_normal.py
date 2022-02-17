@@ -61,7 +61,7 @@ class LogitNormal(Distribution):
         F = self.F
         x_clip = 1e-3
         x = F.clip(x, x_clip, 1 - x_clip)
-        log_prob = -1.0 * (
+        return -1.0 * (
             F.log(self.sigma)
             + F.log(F.sqrt(2 * F.full(1, np.pi)))
             + F.log(x)
@@ -71,7 +71,6 @@ class LogitNormal(Distribution):
                 / (2 * (self.sigma ** 2))
             )
         )
-        return log_prob
 
     def sample(self, num_samples=None, dtype=np.float32):
         def s(mu):
@@ -82,8 +81,7 @@ class LogitNormal(Distribution):
                 F.ones_like(mu) * F.full(1, q_min),
                 F.ones_like(mu) * F.full(1, q_max),
             )
-            transf_sample = self.quantile(sample)
-            return transf_sample
+            return self.quantile(sample)
 
         mult_samp = _sample_multiple(s, self.mu, num_samples=num_samples)
         return mult_samp

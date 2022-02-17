@@ -23,14 +23,11 @@ def _get_mixed_pattern(x, pattern):
 
 
 def get_mixed_pattern(unit_length=16, num_duplicates=1000):
+    dataset_group = [[] for _ in range(16)]
     freq = "1H"
     context_length = 3 * unit_length
     prediction_length = unit_length
     len_sample = context_length + prediction_length
-    dataset_group = [[] for j in range(16)]
-    whole_data = []
-    val_data = []
-    ret = dict()
     start = pd.Timestamp("01-01-2000", freq=freq)
     patterns = [
         ["sin", "linear", "quadratic", "sqrt"],
@@ -39,6 +36,8 @@ def get_mixed_pattern(unit_length=16, num_duplicates=1000):
         ["quadratic", "sin", "sqrt", "linear"],
     ]
     pattern_number = 4
+    whole_data = []
+    val_data = []
     for m, pattern in enumerate(patterns):
         for gid in range(pattern_number):
             for j in range(num_duplicates):
@@ -76,7 +75,7 @@ def get_mixed_pattern(unit_length=16, num_duplicates=1000):
         "Generating the synthetic training data, the total number of training examples:",
         len(whole_data),
     )
-    ret["group_ratio"] = [len(i) / len(whole_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(whole_data) for i in dataset_group]}
     random.shuffle(whole_data)
     group_data = []
     ret["whole_data"] = ListDataset(whole_data, freq=freq)
@@ -103,10 +102,7 @@ def group_electricity_cv(
 ):
     dataset = get_dataset("electricity", regenerate=True)
     len_sample = context_length + prediction_length
-    dataset_group = [[] for i in range(num_groups)]
-    train_full_data = []
-    test_full_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     train_it = iter(dataset.train)
     test_it = iter(dataset.test)
     date_checkpoint = [
@@ -120,17 +116,16 @@ def group_electricity_cv(
         "2013-12-01",
         "2014-03-01",
     ]
+    train_full_data = []
     # get ready the training data
-    for i in range(num_ts):
+    for _ in range(num_ts):
         train_entry = next(train_it)
         unsplit_ts = train_entry["target"]
         unsplit_start = train_entry["start"]
         t = unsplit_start
-        start_date = 4
-
-        for ts_sample_start in range(
+        for start_date, ts_sample_start in enumerate(range(
             0, len(unsplit_ts) - len_sample, prediction_length
-        ):
+        ), start=4):
             for j, date_ckpt in enumerate(date_checkpoint):
                 if unsplit_start < pd.Timestamp(date_ckpt):
                     sid = j
@@ -139,7 +134,6 @@ def group_electricity_cv(
                     sid = len(date_checkpoint)
                     break
             gid = ((start_date + 1) % 7) + sid * 7
-            start_date += 1
             ts_slice = unsplit_ts[
                 ts_sample_start : ts_sample_start + len_sample
             ]
@@ -159,8 +153,9 @@ def group_electricity_cv(
             )
             unsplit_start += pd.Timedelta(hours=prediction_length)
 
+    test_full_data = []
     # get ready the test data
-    for i in range(int(num_ts * 0.2)):
+    for _ in range(int(num_ts * 0.2)):
         test_entry = next(test_it)
         unsplit_ts = test_entry["target"]
         unsplit_start = test_entry["start"]
@@ -182,7 +177,7 @@ def group_electricity_cv(
         "Generating the electricity training data, the total number of training examples:",
         len(train_full_data),
     )
-    ret["group_ratio"] = [len(i) / len(train_full_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(train_full_data) for i in dataset_group]}
     random.shuffle(train_full_data)
     ret["whole_data"] = ListDataset(
         train_full_data, freq=dataset.metadata.freq
@@ -195,96 +190,9 @@ def group_electricity_cv(
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
     os.makedirs("./dataset", exist_ok=True)
-    with open("./dataset/" + file_name + ".csv", "wb") as output:
+    with open(f'./dataset/{file_name}.csv', "wb") as output:
         pickle.dump(ret, output)
     print("Finished pre-processing of the electricity dataset")
-    return True
-
-    dataset = get_dataset("traffic")
-    len_sample = context_length + prediction_length
-    dataset_group = [[] for i in range(num_groups)]
-    train_full_data = []
-    test_full_data = []
-    ret = dict()
-    train_it = iter(dataset.train)
-    test_it = iter(dataset.test)
-    # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
-    date_checkpoint = ["2016-01-01"]
-    # get ready the training data
-    for i in range(num_ts):
-        train_entry = next(train_it)
-        unsplit_ts = train_entry["target"]
-        unsplit_start = train_entry["start"]
-        t = unsplit_start
-        start_date = 4
-
-        for ts_sample_start in range(
-            0, len(unsplit_ts) - len_sample, prediction_length
-        ):
-            for j, date_ckpt in enumerate(date_checkpoint):
-                if unsplit_start < pd.Timestamp(date_ckpt):
-                    sid = j
-                    break
-                elif unsplit_start > pd.Timestamp(date_checkpoint[-1]):
-                    sid = len(date_checkpoint)
-                    break
-            gid = ((start_date + 1) % 7) + sid * 7
-            start_date += 1
-            ts_slice = unsplit_ts[
-                ts_sample_start : ts_sample_start + len_sample
-            ]
-            train_full_data.append(
-                {
-                    "target": ts_slice,
-                    "start": t,
-                    "feat_static_cat": train_entry["feat_static_cat"],
-                }
-            )
-            dataset_group[gid].append(
-                {
-                    "target": ts_slice,
-                    "start": t,
-                    "feat_static_cat": train_entry["feat_static_cat"],
-                }
-            )
-            unsplit_start += pd.Timedelta(hours=prediction_length)
-
-    # get ready the test data
-    for i in range(int(num_ts * 0.2)):
-        test_entry = next(test_it)
-        unsplit_ts = test_entry["target"]
-        unsplit_start = test_entry["start"]
-        for ts_sample_start in range(
-            0, len(unsplit_ts) - len_sample, prediction_length
-        ):
-            ts_slice = unsplit_ts[
-                ts_sample_start : ts_sample_start + len_sample
-            ]
-            test_full_data.append(
-                {
-                    "target": ts_slice,
-                    "start": unsplit_start,
-                    "feat_static_cat": test_entry["feat_static_cat"],
-                }
-            )
-
-    print("total number of training examples: ", len(train_full_data))
-    ret["group_ratio"] = [len(i) / len(train_full_data) for i in dataset_group]
-    print("ratio for each group: ", ret["group_ratio"])
-    random.shuffle(train_full_data)
-    ret["whole_data"] = ListDataset(
-        train_full_data, freq=dataset.metadata.freq
-    )
-    random.shuffle(test_full_data)
-    ret["val_data"] = ListDataset(test_full_data, freq=dataset.metadata.freq)
-    group_data_list = []
-    for group in dataset_group:
-        random.shuffle(group)
-        group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
-    ret["group_data"] = group_data_list
-    os.makedirs("./dataset", exist_ok=True)
-    with open("./dataset/" + file_name + ".csv", "wb") as output:
-        pickle.dump(ret, output)
     return True
 
 
@@ -297,14 +205,12 @@ def group_exchangerate_cv(
 ):
     dataset = get_dataset("exchange_rate", regenerate=True)
     len_sample = context_length + prediction_length
-    dataset_group = [[] for i in range(num_groups)]
-    train_full_data = []
-    test_full_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     train_it = iter(dataset.train)
     test_it = iter(dataset.test)
     # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
     date_checkpoint = ["1994-01-01", "1998-01-01", "2002-01-01"]
+    train_full_data = []
     for i in range(num_ts):
         train_entry = next(train_it)
         unsplit_ts = train_entry["target"]
@@ -338,8 +244,9 @@ def group_exchangerate_cv(
                 }
             )
             unsplit_start += pd.Timedelta("1D") * prediction_length
+    test_full_data = []
     # get ready the test data
-    for i in range(int(num_ts * 0.2)):
+    for _ in range(int(num_ts * 0.2)):
         test_entry = next(test_it)
         unsplit_ts = test_entry["target"]
         unsplit_start = test_entry["start"]
@@ -360,7 +267,7 @@ def group_exchangerate_cv(
         "Generating the exchange rate training data, the total number of training examples:",
         len(train_full_data),
     )
-    ret["group_ratio"] = [len(i) / len(train_full_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(train_full_data) for i in dataset_group]}
     random.shuffle(train_full_data)
     ret["whole_data"] = ListDataset(
         train_full_data, freq=dataset.metadata.freq
@@ -373,7 +280,7 @@ def group_exchangerate_cv(
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
     os.makedirs("./dataset", exist_ok=True)
-    with open("./dataset/" + file_name + ".csv", "wb") as output:
+    with open(f'./dataset/{file_name}.csv', "wb") as output:
         pickle.dump(ret, output)
     print("Finished pre-processing the exchange rate dataset")
     return True
@@ -388,10 +295,7 @@ def group_traffic_cv(
 ):
     dataset = get_dataset("traffic", regenerate=True)
     len_sample = context_length + prediction_length
-    dataset_group = [[] for i in range(num_groups)]
-    train_full_data = []
-    test_full_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     train_it = iter(dataset.train)
     test_it = iter(dataset.test)
     # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
@@ -403,16 +307,16 @@ def group_traffic_cv(
         "2016-03-01",
         "2016-06-01",
     ]
+    train_full_data = []
     # get ready the training data
-    for i in range(num_ts):
+    for _ in range(num_ts):
         train_entry = next(train_it)
         unsplit_ts = train_entry["target"]
         unsplit_start = train_entry["start"]
         t = unsplit_start
-        start_date = 4
-        for ts_sample_start in range(
+        for start_date, ts_sample_start in enumerate(range(
             0, len(unsplit_ts) - len_sample, prediction_length
-        ):
+        ), start=4):
             for j, date_ckpt in enumerate(date_checkpoint):
                 if unsplit_start < pd.Timestamp(date_ckpt):
                     sid = j
@@ -421,7 +325,6 @@ def group_traffic_cv(
                     sid = len(date_checkpoint)
                     break
             gid = ((start_date + 1) % 7) + sid * 7
-            start_date += 1
             ts_slice = unsplit_ts[
                 ts_sample_start : ts_sample_start + len_sample
             ]
@@ -441,8 +344,9 @@ def group_traffic_cv(
             )
             unsplit_start += pd.Timedelta(hours=prediction_length)
 
+    test_full_data = []
     # get ready the test data
-    for i in range(int(num_ts * 0.2)):
+    for _ in range(int(num_ts * 0.2)):
         test_entry = next(test_it)
         unsplit_ts = test_entry["target"]
         unsplit_start = test_entry["start"]
@@ -464,7 +368,7 @@ def group_traffic_cv(
         "Generating the traffic training data, the total number of training examples:",
         len(train_full_data),
     )
-    ret["group_ratio"] = [len(i) / len(train_full_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(train_full_data) for i in dataset_group]}
     random.shuffle(train_full_data)
     ret["whole_data"] = ListDataset(
         train_full_data, freq=dataset.metadata.freq
@@ -477,7 +381,7 @@ def group_traffic_cv(
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
     os.makedirs("./dataset", exist_ok=True)
-    with open("./dataset/" + file_name + ".csv", "wb") as output:
+    with open(f'./dataset/{file_name}.csv', "wb") as output:
         pickle.dump(ret, output)
     print("Finished pre-processing the traffic dataset")
     return True

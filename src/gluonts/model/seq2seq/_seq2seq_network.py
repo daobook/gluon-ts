@@ -95,10 +95,9 @@ class Seq2SeqNetworkBase(mx.gluon.HybridBlock):
         decoder_output = self.decoder(
             decoder_input_static, decoder_input_dynamic
         )
-        scaled_decoder_output = F.broadcast_mul(
+        return F.broadcast_mul(
             decoder_output, scale.expand_dims(-1).expand_dims(-1)
         )
-        return scaled_decoder_output
 
 
 class Seq2SeqTrainingNetwork(Seq2SeqNetworkBase):
@@ -142,12 +141,11 @@ class Seq2SeqTrainingNetwork(Seq2SeqNetworkBase):
             future_feat_dynamic_real=future_feat_dynamic_real,
         )
         projected = self.quantile_proj(scaled_decoder_output)
-        loss = self.loss(future_target, projected)
         # TODO: there used to be "nansum" here, to be fully equivalent we
         # TODO: should have a "nanmean" here
         # TODO: shouldn't we sum and divide by the number of observed values
         # TODO: here?
-        return loss
+        return self.loss(future_target, projected)
 
 
 class Seq2SeqPredictionNetwork(Seq2SeqNetworkBase):
@@ -187,6 +185,4 @@ class Seq2SeqPredictionNetwork(Seq2SeqNetworkBase):
             past_feat_dynamic_real=past_feat_dynamic_real,
             future_feat_dynamic_real=future_feat_dynamic_real,
         )
-        predictions = self.quantile_proj(scaled_decoder_output).swapaxes(2, 1)
-
-        return predictions
+        return self.quantile_proj(scaled_decoder_output).swapaxes(2, 1)

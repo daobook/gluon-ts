@@ -71,9 +71,8 @@ class Quantile(NamedTuple):
                     "Quantile string should be of the form "
                     f'"p10", "p50", ... or "0.1", "0.5", ... but found {quantile}'
                 )
-            else:
-                quantile_float: float = int(m.group(1)) / 100
-                return cls(value=quantile_float, name=str(quantile_float))
+            quantile_float: float = int(m.group(1)) / 100
+            return cls(value=quantile_float, name=str(quantile_float))
 
     @classmethod
     def parse(cls, quantile: Union["Quantile", float, str]) -> "Quantile":
@@ -333,11 +332,13 @@ class SampleForecast(Forecast):
         assert isinstance(
             samples, np.ndarray
         ), "samples should be a numpy array"
-        assert (
-            len(np.shape(samples)) == 2 or len(np.shape(samples)) == 3
-        ), "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
+        assert len(np.shape(samples)) in {
+            2,
+            3,
+        }, "samples should be a 2-dimensional or 3-dimensional array. Dimensions found: {}".format(
             len(np.shape(samples))
         )
+
         self.samples = samples
         self._sorted_samples_value = None
         self._mean = None
@@ -432,14 +433,7 @@ class SampleForecast(Forecast):
         if self._dim is not None:
             return self._dim
         else:
-            if len(self.samples.shape) == 2:
-                # univariate target
-                # shape: (num_samples, prediction_length)
-                return 1
-            else:
-                # multivariate target
-                # shape: (num_samples, prediction_length, target_dim)
-                return self.samples.shape[2]
+            return 1 if len(self.samples.shape) == 2 else self.samples.shape[2]
 
     def as_json_dict(self, config: "Config") -> dict:
         result = super().as_json_dict(config)
@@ -530,7 +524,7 @@ class QuantileForecast(Forecast):
     def quantile(self, inference_quantile: Union[float, str]) -> np.ndarray:
         sorted_forecast_dict = dict(sorted(self._forecast_dict.items()))
         sorted_forecast_dict.pop("mean", None)
-        quantiles = [float(q) for q in sorted_forecast_dict.keys()]
+        quantiles = [float(q) for q in sorted_forecast_dict]
         quantile_predictions = list(sorted_forecast_dict.values())
 
         inference_quantile = Quantile.parse(inference_quantile).value
@@ -571,15 +565,14 @@ class QuantileForecast(Forecast):
     def dim(self) -> int:
         if self._dim is not None:
             return self._dim
+        if (
+            len(self.forecast_array.shape) == 2
+        ):  # 1D target. shape: (num_samples, prediction_length)
+            return 1
         else:
-            if (
-                len(self.forecast_array.shape) == 2
-            ):  # 1D target. shape: (num_samples, prediction_length)
-                return 1
-            else:
-                return self.forecast_array.shape[
-                    1
-                ]  # 2D target. shape: (num_samples, target_dim, prediction_length)
+            return self.forecast_array.shape[
+                1
+            ]  # 2D target. shape: (num_samples, target_dim, prediction_length)
 
     def __repr__(self):
         return ", ".join(
@@ -596,7 +589,7 @@ class QuantileForecast(Forecast):
     def plot(self, label=None, output_file=None, keys=None, *args, **kwargs):
         import matplotlib.pyplot as plt
 
-        label_prefix = "" if label is None else label + "-"
+        label_prefix = "" if label is None else f'{label}-'
 
         if keys is None:
             keys = self.forecast_keys

@@ -165,7 +165,7 @@ class TransformedDistribution(Distribution):
         sign = 1.0
         for t in self.transforms[::-1]:
             x = t.f_inv(x)
-            sign = sign * t.sign
+            sign *= t.sign
         f = self.base_distribution.cdf(x)
         return sign * (f - 0.5) + 0.5
 
@@ -174,7 +174,7 @@ class TransformedDistribution(Distribution):
 
         sign = 1.0
         for t in self.transforms:
-            sign = sign * t.sign
+            sign *= t.sign
 
         if not isinstance(sign, (mx.nd.NDArray, mx.sym.Symbol)):
             level = level if sign > 0 else (1.0 - level)

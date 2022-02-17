@@ -251,7 +251,7 @@ class SelfAttention(HybridBlock):
     def _compute_qkv(self, F, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         qk = self.qk_proj(x)
         qk = F.split(qk, num_outputs=self.n_groups * 2, axis=-1)
-        q = F.concat(*qk[0::2], dim=-1)
+        q = F.concat(*qk[::2], dim=-1)
         k = F.concat(*qk[1::2], dim=-1)
         q = self._split_head(F, q)
         k = self._split_head(F, k)
@@ -337,9 +337,6 @@ class SelfAttention(HybridBlock):
                 rk = F.batch_dot(u, k, transpose_b=True) + F.batch_dot(
                     v, r, transpose_b=True
                 )
-                rk = _torch_gather(F, data=rk, idx=idx, axis=-2)
-                # s_{ij} = qr_{i,|i-j|} + rk_{|i-j|, j}
-                s = qr + rk
             else:
                 # s_{ij} = <r_{|i-j|}, (q_i+k_j)>
                 #        = <q_i, r_{|i-j|}> + <r_{|i-j|}, k_j>
@@ -351,9 +348,9 @@ class SelfAttention(HybridBlock):
                 # rk_{ij} = <r_i, k_j>
                 # rk'_{ij} = rk_{idx[i][j], j} = rk_{|i-j|, j}
                 rk = F.batch_dot(lhs=r, rhs=k, transpose_b=True)
-                rk = _torch_gather(F, data=rk, idx=idx, axis=-2)
-                # s_{ij} = qr_{i,|i-j|} + rk_{|i-j|,j}
-                s = qr + rk
+            rk = _torch_gather(F, data=rk, idx=idx, axis=-2)
+            # s_{ij} = qr_{i,|i-j|} + rk_{|i-j|, j}
+            s = qr + rk
             # add relative positional bias to content-based attention score
             score = score + s
         score = self._apply_mask(F, score, mask)
@@ -415,10 +412,7 @@ class PosFFN(HybridBlock):
             self.lnorm = nn.LayerNorm(axis=-1)
 
     def hybrid_forward(self, F, x: Tensor) -> Tensor:
-        if self.pre_ln:
-            y = self.lnorm(x)
-        else:
-            y = x
+        y = self.lnorm(x) if self.pre_ln else x
         y = self.linear1(y)
         y = self.dropout(y)
         y = self.linear2(y)

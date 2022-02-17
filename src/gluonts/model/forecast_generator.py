@@ -77,13 +77,13 @@ def _(x: np.ndarray) -> Iterator[list]:
 @recursively_zip_arrays.register(tuple)
 def _(x: tuple) -> Iterator[tuple]:
     for m in zip(*[recursively_zip_arrays(y) for y in x]):
-        yield tuple([r for r in m])
+        yield tuple(list(m))
 
 
 @recursively_zip_arrays.register(list)
 def _(x: list) -> Iterator[list]:
     for m in zip(*[recursively_zip_arrays(y) for y in x]):
-        yield [r for r in m]
+        yield list(m)
 
 
 @recursively_zip_arrays.register(type(None))

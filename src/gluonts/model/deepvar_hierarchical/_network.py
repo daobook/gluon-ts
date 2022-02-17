@@ -63,32 +63,32 @@ def reconcile_samples(
     """
     if not seq_axis:
         return mx.nd.dot(samples, reconciliation_mat, transpose_b=True)
-    else:
-        num_dims = len(samples.shape)
 
-        last_dim_in_seq_axis = num_dims - 1 in seq_axis or -1 in seq_axis
-        assert (
-            not last_dim_in_seq_axis
-        ), f"The last dimension cannot be processed iteratively. Remove axis {num_dims - 1} (or -1) from `seq_axis`."
+    num_dims = len(samples.shape)
 
-        # In this case, reconcile samples by going over each index in `seq_axis` iteratively.
-        # Note that `seq_axis` can be more than one dimension.
-        num_seq_axes = len(seq_axis)
+    last_dim_in_seq_axis = num_dims - 1 in seq_axis or -1 in seq_axis
+    assert (
+        not last_dim_in_seq_axis
+    ), f"The last dimension cannot be processed iteratively. Remove axis {num_dims - 1} (or -1) from `seq_axis`."
 
-        # bring the axes to iterate in the beginning
-        samples = mx.nd.moveaxis(samples, seq_axis, list(range(num_seq_axes)))
+    # In this case, reconcile samples by going over each index in `seq_axis` iteratively.
+    # Note that `seq_axis` can be more than one dimension.
+    num_seq_axes = len(seq_axis)
 
-        seq_axes_sizes = samples.shape[:num_seq_axes]
-        out = [
-            mx.nd.dot(samples[idx], reconciliation_mat, transpose_b=True)
-            # get the sequential index from the cross-product of their sizes.
-            for idx in product(*[range(size) for size in seq_axes_sizes])
-        ]
+    # bring the axes to iterate in the beginning
+    samples = mx.nd.moveaxis(samples, seq_axis, list(range(num_seq_axes)))
 
-        # put the axis in the correct order again
-        out = mx.nd.concat(*out, dim=0).reshape(samples.shape)
-        out = mx.nd.moveaxis(out, list(range(len(seq_axis))), seq_axis)
-        return out
+    seq_axes_sizes = samples.shape[:num_seq_axes]
+    out = [
+        mx.nd.dot(samples[idx], reconciliation_mat, transpose_b=True)
+        # get the sequential index from the cross-product of their sizes.
+        for idx in product(*[range(size) for size in seq_axes_sizes])
+    ]
+
+    # put the axis in the correct order again
+    out = mx.nd.concat(*out, dim=0).reshape(samples.shape)
+    out = mx.nd.moveaxis(out, list(range(len(seq_axis))), seq_axis)
+    return out
 
 
 def reconciliation_error(A: Tensor, samples: Tensor) -> float:
@@ -211,18 +211,17 @@ class DeepVARHierarchicalNetwork(DeepVARNetwork):
         epoch_frac = epoch_no / self.epochs
 
         if (
-            self.coherent_train_samples
-            and epoch_frac > self.warmstart_epoch_frac
+            not self.coherent_train_samples
+            or epoch_frac <= self.warmstart_epoch_frac
         ):
-            coherent_samples = reconcile_samples(
-                reconciliation_mat=self.M,
-                samples=samples,
-                seq_axis=self.seq_axis,
-            )
-            assert_shape(coherent_samples, samples.shape)
-            return coherent_samples
-        else:
             return samples
+        coherent_samples = reconcile_samples(
+            reconciliation_mat=self.M,
+            samples=samples,
+            seq_axis=self.seq_axis,
+        )
+        assert_shape(coherent_samples, samples.shape)
+        return coherent_samples
 
     def loss(self, F, target: Tensor, distr: Distribution) -> Tensor:
         """
@@ -292,22 +291,21 @@ class DeepVARHierarchicalNetwork(DeepVARNetwork):
         """
         if not self.coherent_pred_samples:
             return samples
-        else:
-            coherent_samples = reconcile_samples(
-                reconciliation_mat=self.M,
-                samples=samples,
-                seq_axis=self.seq_axis,
+        coherent_samples = reconcile_samples(
+            reconciliation_mat=self.M,
+            samples=samples,
+            seq_axis=self.seq_axis,
+        )
+        assert_shape(coherent_samples, samples.shape)
+
+        # assert that A*X_proj ~ 0
+        if self.assert_reconciliation:
+            assert (
+                reconciliation_error(self.A, samples=coherent_samples)
+                < self.reconciliation_tol
             )
-            assert_shape(coherent_samples, samples.shape)
 
-            # assert that A*X_proj ~ 0
-            if self.assert_reconciliation:
-                assert (
-                    reconciliation_error(self.A, samples=coherent_samples)
-                    < self.reconciliation_tol
-                )
-
-            return coherent_samples
+        return coherent_samples
 
 
 class DeepVARHierarchicalTrainingNetwork(
@@ -346,7 +344,7 @@ class DeepVARHierarchicalTrainingNetwork(
         ), "At least one of CRPS or likelihood weights must be non-zero"
         if self.CRPS_weight == 0.0 and self.coherent_train_samples:
             assert "No sampling being performed. coherent_train_samples flag is ignored"
-        if not self.sample_LH == 0.0 and self.coherent_train_samples:
+        if self.sample_LH != 0.0 and self.coherent_train_samples:
             assert "No sampling being performed. coherent_train_samples flag is ignored"
         if self.likelihood_weight == 0.0 and self.sample_LH:
             assert (

@@ -247,18 +247,11 @@ class PreprocessGeneric:
         Outputs a reasonable choice for number of windows to sample from
         each time series at training time.
         """
-        n_time_series = sum(
-            [
-                len(time_series["target"])
+        n_time_series = sum(len(time_series["target"])
                 - self.context_window_size
                 - self.forecast_horizon
-                >= 0
-                for time_series in ts_list
-            ]
-        )
-        max_size_ts = max(
-            [len(time_series["target"]) for time_series in ts_list]
-        )
+                >= 0 for time_series in ts_list)
+        max_size_ts = max(len(time_series["target"]) for time_series in ts_list)
         n_windows_per_time_series = self.max_n_datapts // n_time_series
         if n_time_series * 1000 < n_windows_per_time_series:
             n_windows_per_time_series = n_time_series * 1000
@@ -380,10 +373,7 @@ class PreprocessOnlyLagFeatures(PreprocessGeneric):
         list
         """
         end_index = starting_index + self.context_window_size
-        if starting_index < 0:
-            prefix = [None] * abs(starting_index)
-        else:
-            prefix = []
+        prefix = [None] * abs(starting_index) if starting_index < 0 else []
         time_series_window = time_series["target"][starting_index:end_index]
         only_lag_features, transform_dict = self._pre_transform(
             time_series_window

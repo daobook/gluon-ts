@@ -44,11 +44,7 @@ def as_repr_list(x: list):
 
 @as_repr.register(float)
 def as_repr_float(x: float):
-    if math.isfinite(x):
-        return str(x)
-    else:
-        # e.g. `nan` needs to be encoded as `float("nan")`
-        return 'float("{x}")'
+    return str(x) if math.isfinite(x) else 'float("{x}")'
 
 
 @as_repr.register(dict)

@@ -105,7 +105,7 @@ class TPPTransformedDistribution(TransformedDistribution):
         """
         sign = 1.0
         for t in transforms:
-            sign = sign * t.sign
+            sign *= t.sign
         if (sign != 1.0).asnumpy().any():
             raise ValueError("The transformations must be increasing.")
 
@@ -218,8 +218,7 @@ class TPPDistributionOutput(DistributionOutput):
             )
         if scale is None:
             return self.distr_cls(*distr_args)
-        else:
-            distr = self.distr_cls(*distr_args)
-            return TPPTransformedDistribution(
-                distr, [AffineTransformation(scale=scale)]
-            )
+        distr = self.distr_cls(*distr_args)
+        return TPPTransformedDistribution(
+            distr, [AffineTransformation(scale=scale)]
+        )

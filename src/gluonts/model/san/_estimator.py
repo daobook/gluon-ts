@@ -158,23 +158,23 @@ class SelfAttentionEstimator(GluonEstimator):
             transforms.extend(
                 [
                     SetField(
-                        output_field="past_" + FieldName.FEAT_DYNAMIC_CAT,
+                        output_field=f'past_{FieldName.FEAT_DYNAMIC_CAT}',
                         value=[[]] * self.context_length,
                     ),
                     AsNumpyArray(
-                        field="past_" + FieldName.FEAT_DYNAMIC_CAT,
-                        expected_ndim=2,
+                        field=f'past_{FieldName.FEAT_DYNAMIC_CAT}', expected_ndim=2
                     ),
                     SetField(
-                        output_field="future_" + FieldName.FEAT_DYNAMIC_CAT,
+                        output_field=f'future_{FieldName.FEAT_DYNAMIC_CAT}',
                         value=[[]] * self.prediction_length,
                     ),
                     AsNumpyArray(
-                        field="future_" + FieldName.FEAT_DYNAMIC_CAT,
+                        field=f'future_{FieldName.FEAT_DYNAMIC_CAT}',
                         expected_ndim=2,
                     ),
                 ]
             )
+
         if self.use_feat_static_real:
             transforms.append(
                 AsNumpyArray(
@@ -237,7 +237,7 @@ class SelfAttentionEstimator(GluonEstimator):
         return Chain(transforms)
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,
