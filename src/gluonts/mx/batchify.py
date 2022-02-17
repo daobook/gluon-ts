@@ -42,7 +42,7 @@ def _is_stackable(arrays: List, axis: int = 0) -> bool:
     target axes have equal length; i.e. they are directly `stack` able.
     """
     if isinstance(arrays[0], np.ndarray):
-        s = set(arr.shape[axis] for arr in arrays)
+        s = {arr.shape[axis] for arr in arrays}
         return len(s) <= 1 and arrays[0].shape[axis] != 0
     return True
 
@@ -78,7 +78,7 @@ def stack(
     if isinstance(data[0], np.ndarray):
         data = mx.nd.array(data, dtype=dtype, ctx=ctx)
     elif isinstance(data[0], (list, tuple)):
-        return list(stack(t, ctx=ctx) for t in zip(*data))
+        return [stack(t, ctx=ctx) for t in zip(*data)]
     return data
 
 

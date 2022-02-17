@@ -81,11 +81,10 @@ class Laplace(Distribution):
         def s(mu: Tensor, b: Tensor) -> Tensor:
             ones = mu.ones_like()
             x = F.random.uniform(-0.5 * ones, 0.5 * ones, dtype=dtype)
-            laplace_samples = mu - b * F.sign(x) * F.log(
+            return mu - b * F.sign(x) * F.log(
                 (1.0 - 2.0 * F.abs(x)).clip(1.0e-30, 1.0e30)
                 # 1.0 - 2.0 * F.abs(x)
             )
-            return laplace_samples
 
         return _sample_multiple(
             s, mu=self.mu, b=self.b, num_samples=num_samples

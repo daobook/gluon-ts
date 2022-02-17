@@ -114,9 +114,9 @@ class SelfAttentionNetwork(HybridBlock):
         self.d_hidden = d_hidden
         assert (n_output % 2 == 1) and (n_output <= 9)
         self.quantiles = sum(
-            [[i / 10, 1.0 - i / 10] for i in range(1, (n_output + 1) // 2)],
-            [0.5],
+            ([i / 10, 1.0 - i / 10] for i in range(1, (n_output + 1) // 2)), [0.5]
         )
+
         self.normalizer_eps = normalizer_eps
 
         with self.name_scope():
@@ -218,7 +218,7 @@ class SelfAttentionNetwork(HybridBlock):
                         else self.prediction_length,
                     )
                 )
-            if len(covariates) > 0:
+            if covariates:
                 covariates = F.concat(*covariates, dim=-1)
                 covariates = self.covar_proj(covariates)
             else:
@@ -236,19 +236,13 @@ class SelfAttentionNetwork(HybridBlock):
                         else self.prediction_length,
                     )
                 )
-            if len(categories) > 0:
+            if categories:
                 categories = F.concat(*categories, dim=-1)
                 embeddings = self.embedder(categories)
                 embeddings = F.reshape(
                     embeddings, shape=(0, 0, -4, self.d_hidden, -1)
                 ).sum(axis=-1)
-                if covariates is not None:
-                    covariates = covariates + embeddings
-                else:
-                    covariates = embeddings
-            else:
-                pass
-
+                covariates = covariates + embeddings if covariates is not None else embeddings
             return covariates
 
         past_covariates = _assemble_covariates(
@@ -304,8 +298,7 @@ class SelfAttentionNetwork(HybridBlock):
         for block in self._blocks:
             value = block(value, mask)
         value = F.slice_axis(value, axis=1, begin=-horizon, end=None)
-        preds = self.output_proj(value)
-        return preds
+        return self.output_proj(value)
 
 
 class SelfAttentionTrainingNetwork(SelfAttentionNetwork):

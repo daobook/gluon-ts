@@ -62,7 +62,7 @@ class JsonLinesFile:
         # Basic idea is to split the dataset into roughly equally sized segments
         # with lower and upper bound, where each worker is assigned one segment
         bounds = get_bounds_for_mp_data_loading(len(self))
-        if not self.cache or (self.cache and not self._data_cache):
+        if not self.cache or not self._data_cache:
             with self.open(self.path) as jsonl_file:
                 for line_number, raw in enumerate(jsonl_file):
                     if not bounds.lower <= line_number < bounds.upper:

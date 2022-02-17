@@ -29,8 +29,7 @@ def KMeans(x, K=10, Niter=10000, verbose=True):
     # - x  is the (N, D) point cloud,
     # - cl is the (N,) vector of class labels
     # - c  is the (K, D) cloud of cluster centroids
-    for i in range(Niter):
-
+    for _ in range(Niter):
         # E step: assign points to the closest cluster -------------------------
         D_ij = ((x_i - c_j) ** 2).sum(-1)  # (N, K) symbolic squared distances
         # print(D_ij.argmin(dim=1))
@@ -92,16 +91,14 @@ def KMeans_inside_dataset(
     file_name="default",
 ):
     dataset = get_dataset("traffic")
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     it = iter(dataset.train)
     # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
     num_ts = num_ts_
     len_sample = context_length + prediction_length
     index = 0
     feature = torch.Tensor([])
-    for i in range(num_ts):
+    for _ in range(num_ts):
         train_entry = next(it)
         target = train_entry["target"]
 
@@ -130,7 +127,8 @@ def KMeans_inside_dataset(
     cl, c = KMeans(feature, num_groups)
     it = iter(dataset.train)
     sample_id = 0
-    for i in range(num_ts):
+    whole_data = []
+    for _ in range(num_ts):
         train_entry = next(it)
         target = train_entry["target"]
         unsplit_start = train_entry["start"]
@@ -156,7 +154,7 @@ def KMeans_inside_dataset(
             unsplit_start += pd.Timedelta(hours=prediction_length)
             sample_id += 1
     print(len(whole_data))
-    ret["group_ratio"] = [len(i) / len(whole_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(whole_data) for i in dataset_group]}
     print(ret["group_ratio"])
     random.shuffle(whole_data)
     ret["whole_data"] = ListDataset(whole_data, freq=dataset.metadata.freq)
@@ -166,10 +164,10 @@ def KMeans_inside_dataset(
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
     print("write whole data")
-    with open("synthetic_" + file_name + "_whole_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_whole_data.csv', "wb") as output:
         pickle.dump(ret["whole_data"], output)
     print("write group data")
-    with open("synthetic_" + file_name + "_group_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_group_data.csv', "wb") as output:
         pickle.dump(ret, output)
     return True
 
@@ -182,9 +180,7 @@ def KMeans_m5_dataset(
     file_name="default",
 ):
     df = pd.read_csv("sales_train_evaluation.csv")
-    dataset_group = [[] for i in range(num_groups)]
-    whole_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
     num_ts = num_ts_
     len_sample = context_length + prediction_length
@@ -203,10 +199,8 @@ def KMeans_m5_dataset(
     df_feature = pd.concat([df_feature, df.iloc[:, -2]], axis=1)
     feature = torch.from_numpy(df_feature.to_numpy()).contiguous()
     cl, c = KMeans(feature, num_groups)
-    # print(cl)
-    # import pdb;pdb.set_trace()
-    sample_id = 0
-    for i in range(num_ts):
+    whole_data = []
+    for sample_id, i in enumerate(range(num_ts)):
         ts_slice = df.iloc[i : i + 1, 1947 - len_sample : 1947]
         ts_slice = torch.from_numpy(ts_slice.to_numpy())[0]
         # print(ts_slice)
@@ -225,9 +219,8 @@ def KMeans_m5_dataset(
                 "start": unsplit_start,
             }  # , 'feat_static_cat': train_entry['feat_static_cat']}
         )
-        sample_id += 1
     print(len(whole_data))
-    ret["group_ratio"] = [len(i) / len(whole_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(whole_data) for i in dataset_group]}
     print(ret["group_ratio"])
     random.shuffle(whole_data)
     ret["whole_data"] = ListDataset(whole_data, freq="1H")
@@ -237,9 +230,9 @@ def KMeans_m5_dataset(
         group_data_list.append(ListDataset(group, freq="1H"))
     ret["group_data"] = group_data_list
     print("write whole data")
-    with open("synthetic_" + file_name + "_whole_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_whole_data.csv', "wb") as output:
         pickle.dump(ret["whole_data"], output)
     print("write group data")
-    with open("synthetic_" + file_name + "_group_data.csv", "wb") as output:
+    with open(f'synthetic_{file_name}_group_data.csv', "wb") as output:
         pickle.dump(ret, output)
     return True

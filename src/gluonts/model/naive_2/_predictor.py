@@ -31,25 +31,22 @@ def seasonality_test(past_ts_data: np.array, season_length: int) -> bool:
     As described here: https://www.m4.unic.ac.cy/wp-content/uploads/2018/03/M4-Competitors-Guide.pdf
     Code based on: https://github.com/Mcompetitions/M4-methods/blob/master/Benchmarks%20and%20Evaluation.R
     """
-    critical_z_score = 1.645  # corresponds to 90% confidence interval
     if len(past_ts_data) < 3 * season_length:
         return False
-    else:
-        # calculate auto-correlation for lags up to season_length
-        auto_correlations = sm.tsa.stattools.acf(
-            past_ts_data, fft=False, nlags=season_length
-        )
-        auto_correlations[1:] = 2 * auto_correlations[1:] ** 2
-        limit = (
-            critical_z_score
-            / np.sqrt(len(past_ts_data))
-            * np.sqrt(np.cumsum(auto_correlations))
-        )
-        is_seasonal = (
+    # calculate auto-correlation for lags up to season_length
+    auto_correlations = sm.tsa.stattools.acf(
+        past_ts_data, fft=False, nlags=season_length
+    )
+    auto_correlations[1:] = 2 * auto_correlations[1:] ** 2
+    critical_z_score = 1.645  # corresponds to 90% confidence interval
+    limit = (
+        critical_z_score
+        / np.sqrt(len(past_ts_data))
+        * np.sqrt(np.cumsum(auto_correlations))
+    )
+    return (
             abs(auto_correlations[season_length]) > limit[season_length]
         )
-
-    return is_seasonal
 
 
 def naive_2(
@@ -103,9 +100,7 @@ def naive_2(
         np.ones(prediction_length) * seasonality_normed_context[-1]
     )
 
-    forecast = np.mean(naive_forecast) * multiplicative_seasonal_component
-
-    return forecast
+    return np.mean(naive_forecast) * multiplicative_seasonal_component
 
 
 class Naive2Predictor(RepresentablePredictor):

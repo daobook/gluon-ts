@@ -16,14 +16,14 @@ ROOT = Path(__file__).parent
 SRC = ROOT / "src"
 
 
-GPU_SUPPORT = 0 == int(
+GPU_SUPPORT = int(
     subprocess.call(
         "nvidia-smi",
         shell=True,
         stdout=open(os.devnull, "w"),
         stderr=open(os.devnull, "w"),
     )
-)
+) == 0
 
 try:
     from sphinx import apidoc, setup_command
@@ -54,9 +54,7 @@ def find_requirements(filename):
 
 
 def get_version_and_cmdclass(version_file):
-    with open(version_file) as fobj:
-        code = fobj.read()
-
+    code = Path(version_file).read_text()
     globals_ = {"__file__": str(version_file)}
     exec(code, globals_)
 
@@ -154,7 +152,7 @@ class StyleCheckCommand(distutils.cmd.Command):
             "Python files in the following folders will be style-checked "
             "with `black`:"
         )
-        print("\n".join(["  " + arg for arg in black_args]))
+        print("\n".join([f'  {arg}' for arg in black_args]))
 
         # a more direct way to call black
         # this bypasses the problematic `_verify_python3_env` call in

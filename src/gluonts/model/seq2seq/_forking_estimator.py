@@ -260,7 +260,6 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
         )
 
     def create_transformation(self) -> Transformation:
-        chain = []
         dynamic_feat_fields = []
         remove_field_names = [
             FieldName.FEAT_DYNAMIC_CAT,
@@ -277,7 +276,7 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
         if not self.use_feat_static_cat:
             remove_field_names.append(FieldName.FEAT_STATIC_CAT)
 
-        chain.extend(
+        chain = list(
             [
                 RemoveFields(field_names=remove_field_names),
                 AddObservedValuesIndicator(
@@ -325,7 +324,7 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
         # we will however disregard it in the hybrid forward.
         # the time feature is empty for yearly freq so also adding a dummy feature
         # in the case that the time feature is the only one on
-        if len(dynamic_feat_fields) == 0 or (
+        if not dynamic_feat_fields or (
             not self.add_age_feature
             and not self.use_feat_dynamic_real
             and self.freq == "Y"
@@ -368,7 +367,7 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
         return Chain(chain)
 
     def _create_instance_splitter(self, mode: str):
-        assert mode in ["training", "validation", "test"]
+        assert mode in {"training", "validation", "test"}
 
         instance_sampler = {
             "training": self.train_sampler,
@@ -376,11 +375,7 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
             "test": TestSplitSampler(),
         }[mode]
 
-        chain = []
-
-        chain.append(
-            # because of how the forking decoder works, every time step
-            # in context is used for splitting, which is why we use the TestSplitSampler
+        chain = [
             ForkingSequenceSplitter(
                 instance_sampler=instance_sampler,
                 enc_len=self.context_length,
@@ -420,7 +415,8 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
                 ),
                 prediction_time_decoder_exclude=[FieldName.OBSERVED_VALUES],
             )
-        )
+        ]
+
 
         # past_feat_dynamic features generated above in ForkingSequenceSplitter from those under feat_dynamic - we need
         # to stack with the other short related time series from the system labeled as past_past_feat_dynamic_real.
@@ -433,12 +429,13 @@ class ForkingSeq2SeqEstimator(GluonEstimator):
                 VstackFeatures(
                     output_field=FieldName.PAST_FEAT_DYNAMIC,
                     input_fields=[
-                        "past_" + FieldName.PAST_FEAT_DYNAMIC_REAL,
+                        f'past_{FieldName.PAST_FEAT_DYNAMIC_REAL}',
                         FieldName.PAST_FEAT_DYNAMIC,
                     ],
                     h_stack=True,
                 )
             )
+
 
         return Chain(chain)
 

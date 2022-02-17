@@ -98,8 +98,7 @@ class GenPareto(Distribution):
     def cdf(self, x: Tensor) -> Tensor:
         F = self.F
         x_shifted = F.broadcast_div(x, self.beta)
-        u = 1 - F.power(1 + self.xi * x_shifted, -F.reciprocal(self.xi))
-        return u
+        return 1 - F.power(1 + self.xi * x_shifted, -F.reciprocal(self.xi))
 
     def quantile(self, level: Tensor):
         F = self.F
@@ -109,8 +108,7 @@ class GenPareto(Distribution):
             level = level.expand_dims(axis=-1)
 
         x_shifted = F.broadcast_div(F.power(1 - level, -self.xi) - 1, self.xi)
-        x = F.broadcast_mul(x_shifted, self.beta)
-        return x
+        return F.broadcast_mul(x_shifted, self.beta)
 
     @property
     def mean(self) -> Tensor:
@@ -146,8 +144,7 @@ class GenPareto(Distribution):
                 F.zeros_like(xi), F.ones_like(xi)
             ).sample()
             boxcox = box_cox_transform.BoxCoxTransform(-xi, F.array([0]))
-            sample_X = -1 * boxcox.f(1 - sample_U) * beta
-            return sample_X
+            return -1 * boxcox.f(1 - sample_U) * beta
 
         samples = _sample_multiple(
             s,

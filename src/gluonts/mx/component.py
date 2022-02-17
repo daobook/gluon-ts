@@ -64,12 +64,9 @@ def equals_parameter_dict(
 
     def strip_prefix_enumeration(key, prefix):
         if key.startswith(prefix):
-            name = key[len(prefix) :]
-        else:
-            prefix, args = key.split("_", 1)
-            name = prefix.rstrip("0123456789") + args
-
-        return name
+            return key[len(prefix) :]
+        prefix, args = key.split("_", 1)
+        return prefix.rstrip("0123456789") + args
 
     this_param_names_stripped = [
         strip_prefix_enumeration(key, this.prefix) for key in this.keys()

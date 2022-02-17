@@ -101,12 +101,7 @@ def dump_code(o: Any) -> str:
             return json.dumps(x)
 
         if isinstance(x, float) or np.issubdtype(type(x), np.inexact):
-            if math.isfinite(x):
-                return str(x)
-            else:
-                # e.g. `nan` needs to be encoded as `float("nan")`
-                return 'float("{x}")'
-
+            return str(x) if math.isfinite(x) else 'float("{x}")'
         if isinstance(x, int) or np.issubdtype(type(x), np.integer):
             return str(x)
 
@@ -357,18 +352,13 @@ def decode(r: Any) -> Any:
     # r = { 'class': ..., 'kwargs': ... }
     if type(r) == dict and r.get("__kind__") == kind_type:
         return locate(r["class"])
-    # r = { k1: v1, ..., kn: vn }
     elif type(r) == dict:
         return {k: decode(v) for k, v in r.items()}
-    # r = ( y1, ..., yn )
     elif type(r) == tuple:
-        return tuple([decode(y) for y in r])
-    # r = [ y1, ..., yn ]
+        return tuple(decode(y) for y in r)
     elif type(r) == list:
         return [decode(y) for y in r]
-    # r = { y1, ..., yn }
     elif type(r) == set:
         return {decode(y) for y in r}
-    # r = a
     else:
         return r

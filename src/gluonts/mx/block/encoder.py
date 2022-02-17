@@ -102,10 +102,9 @@ class Seq2SeqEncoder(nn.HybridBlock):
         tiled_static_features = F.batch_dot(
             helper_ones, static_features.expand_dims(1)
         )  # (N, T, C)
-        inputs = F.concat(
+        return F.concat(
             target, tiled_static_features, dynamic_features, dim=2
-        )  # (N, T, C)
-        return inputs
+        )
 
 
 # TODO: fix handling of static features
@@ -145,14 +144,17 @@ class HierarchicalCausalConv1DEncoder(Seq2SeqEncoder):
         **kwargs,
     ) -> None:
         assert all(
-            [x > 0 for x in dilation_seq]
+            x > 0 for x in dilation_seq
         ), "`dilation_seq` values must be greater than zero"
+
         assert all(
-            [x > 0 for x in kernel_size_seq]
+            x > 0 for x in kernel_size_seq
         ), "`kernel_size_seq` values must be greater than zero"
+
         assert all(
-            [x > 0 for x in channels_seq]
+            x > 0 for x in channels_seq
         ), "`channel_dim_seq` values must be greater than zero"
+
 
         super().__init__(**kwargs)
 

@@ -19,14 +19,12 @@ def group_exchangerate_cv(
 ):
     dataset = get_dataset("exchange_rate")
     len_sample = context_length + prediction_length
-    dataset_group = [[] for i in range(num_groups)]
-    train_full_data = []
-    test_full_data = []
-    ret = dict()
+    dataset_group = [[] for _ in range(num_groups)]
     train_it = iter(dataset.train)
     test_it = iter(dataset.test)
     # num_ts = int(dataset.metadata.feat_static_cat[0].cardinality)
     date_checkpoint = ["1994-01-01", "1998-01-01", "2002-01-01"]
+    train_full_data = []
     for i in range(num_ts):
         train_entry = next(train_it)
         unsplit_ts = train_entry["target"]
@@ -60,8 +58,9 @@ def group_exchangerate_cv(
                 }
             )
             unsplit_start += pd.Timedelta("1D") * prediction_length
+    test_full_data = []
     # get ready the test data
-    for i in range(int(num_ts * 0.2)):
+    for _ in range(int(num_ts * 0.2)):
         test_entry = next(test_it)
         unsplit_ts = test_entry["target"]
         unsplit_start = test_entry["start"]
@@ -79,7 +78,7 @@ def group_exchangerate_cv(
                 }
             )
     print("total number of training examples: ", len(train_full_data))
-    ret["group_ratio"] = [len(i) / len(train_full_data) for i in dataset_group]
+    ret = {'group_ratio': [len(i) / len(train_full_data) for i in dataset_group]}
     print("ratio for each group: ", ret["group_ratio"])
     random.shuffle(train_full_data)
     ret["whole_data"] = ListDataset(
@@ -92,6 +91,6 @@ def group_exchangerate_cv(
         random.shuffle(group)
         group_data_list.append(ListDataset(group, freq=dataset.metadata.freq))
     ret["group_data"] = group_data_list
-    with open("../dataset/" + file_name + "_data.csv", "wb") as output:
+    with open(f'../dataset/{file_name}_data.csv', "wb") as output:
         pickle.dump(ret, output)
     return True

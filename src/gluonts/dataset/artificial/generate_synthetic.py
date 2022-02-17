@@ -55,20 +55,20 @@ def write_csv_row(
         item_id = int(data[FieldName.ITEM_ID])
         for j, target in enumerate(data[FieldName.TARGET]):
             # Using convention that there are no missing values before the start date
-            if is_missing and j != 0 and j % num_missing == 0:
-                timestamp += 1
-                continue  # Skip every 4th entry
-            else:
-                timestamp_row = timestamp
-                if freq in ["W", "D", "M"]:
-                    timestamp_row = timestamp.date()
+            if not is_missing or j == 0 or j % num_missing != 0:
+                timestamp_row = timestamp.date() if freq in {"W", "D", "M"} else timestamp
                 row = [item_id, timestamp_row, target]
                 # Check if related time series is present
                 if FieldName.FEAT_DYNAMIC_REAL in data.keys():
-                    for feat_dynamic_real in data[FieldName.FEAT_DYNAMIC_REAL]:
-                        row.append(feat_dynamic_real[j])
+                    row.extend(
+                        feat_dynamic_real[j]
+                        for feat_dynamic_real in data[
+                            FieldName.FEAT_DYNAMIC_REAL
+                        ]
+                    )
+
                 csv_writer.writerow(row)
-                timestamp += 1
+            timestamp += 1
 
 
 def generate_sf2(
@@ -119,10 +119,10 @@ def generate_sf2s_and_csv(
         os.makedirs(os.path.dirname(file_path))
     freq = artificial_dataset.metadata.freq
     train_set = artificial_dataset.train
-    generate_sf2(file_path + "train.json", train_set, is_missing, num_missing)
+    generate_sf2(f'{file_path}train.json', train_set, is_missing, num_missing)
     test_set = artificial_dataset.test
-    generate_sf2(file_path + "test.json", test_set, is_missing, num_missing)
-    with open(file_path + "input_to_forecast.csv", "w") as csv_file:
+    generate_sf2(f'{file_path}test.json', test_set, is_missing, num_missing)
+    with open(f'{file_path}input_to_forecast.csv', "w") as csv_file:
         # Test set has training set with the additional values to predict
         write_csv_row(test_set, freq, csv_file, is_missing, num_missing)
 

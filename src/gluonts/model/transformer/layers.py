@@ -507,9 +507,7 @@ class TransformerProcessBlock(HybridBlock):
 
         self.sequence = sequence
         self.dropout = dropout
-        self.layer_norm = None
-        if "n" in sequence:
-            self.layer_norm = LayerNormalization()
+        self.layer_norm = LayerNormalization() if "n" in sequence else None
 
     # noinspection PyMethodOverriding,PyPep8Naming
     def hybrid_forward(

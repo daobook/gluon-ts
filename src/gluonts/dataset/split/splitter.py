@@ -149,8 +149,8 @@ class TimeSeriesSlice(pydantic.BaseModel):
 
         target = self.target[slice_]
 
-        assert all([len(target) == len(feat) for feat in feat_dynamic_real])
-        assert all([len(target) == len(feat) for feat in feat_dynamic_cat])
+        assert all(len(target) == len(feat) for feat in feat_dynamic_real)
+        assert all(len(target) == len(feat) for feat in feat_dynamic_cat)
 
         return TimeSeriesSlice(
             target=target,

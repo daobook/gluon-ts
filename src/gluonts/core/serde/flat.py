@@ -44,10 +44,7 @@ from ._base import encode as base_encode, Kind, decode as base_decode
 
 def join(a, b, sep="."):
     """Joins `a` and `b` using `sep`."""
-    if not a:
-        return b
-
-    return f"{a}{sep}{b}"
+    return b if not a else f"{a}{sep}{b}"
 
 
 def _encode(data: Any, path: str, result: dict):

@@ -45,10 +45,7 @@ def conv1d(channels, kernel_size, in_channels, use_bias=True, **kwargs):
         n *= k
     stdv = 1.0 / math.sqrt(n)
     winit = mx.initializer.Uniform(stdv)
-    if use_bias:
-        binit = mx.initializer.Uniform(stdv)
-    else:
-        binit = "zeros"
+    binit = mx.initializer.Uniform(stdv) if use_bias else "zeros"
     return nn.Conv1D(
         channels=channels,
         kernel_size=kernel_size,
@@ -264,10 +261,9 @@ class WaveNet(nn.HybridBlock):
             axis=1,
         )
         full_time_features = F.concat(past_time_feat, future_time_feat, dim=-1)
-        full_features = F.concat(
+        return F.concat(
             full_time_features, full_observed, repeated_static_feat, dim=1
         )
-        return full_features
 
     def target_feature_embedding(
         self,
@@ -421,8 +417,7 @@ class WaveNetTraining(WaveNet):
             full_observed, begin=self.receptive_field, end=None, axis=-1
         )
         loss_weight = F.expand_dims(loss_weight, axis=2)
-        loss = self.cross_entropy_loss(unnormalized_output, label, loss_weight)
-        return loss
+        return self.cross_entropy_loss(unnormalized_output, label, loss_weight)
 
 
 class WaveNetSampler(WaveNet):

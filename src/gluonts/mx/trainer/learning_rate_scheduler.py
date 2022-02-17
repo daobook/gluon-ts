@@ -81,10 +81,11 @@ class MetricAttentiveScheduler(mx.lr_scheduler.LRScheduler):
 
         assert patience >= 0, f"patience should be nonnegative, got {patience}"
 
-        assert objective in [
+        assert objective in {
             "min",
             "max",
-        ], f"objective should be 'min' or 'max', got {objective}"
+        }, f"objective should be 'min' or 'max', got {objective}"
+
 
         super(MetricAttentiveScheduler, self).__init__(base_lr=base_lr)
 
@@ -123,11 +124,9 @@ class MetricAttentiveScheduler(mx.lr_scheduler.LRScheduler):
             self.curr_lr = self.base_lr
         assert self.curr_lr is not None
 
-        metric_improved = (
+        if metric_improved := (
             self.objective == "min" and metric_value < self.best_metric
-        ) or (self.objective == "max" and metric_value > self.best_metric)
-
-        if metric_improved:
+        ) or (self.objective == "max" and metric_value > self.best_metric):
             self.best_metric = metric_value
             self.prev_change = self.epoch_no
 
@@ -227,7 +226,7 @@ class LearningRateReduction(Callback):
             self.lr_scheduler(trainer.optimizer.num_update)
         )
 
-        if not trainer.learning_rate == pre_step_learning_rate:
+        if trainer.learning_rate != pre_step_learning_rate:
             if best_epoch_info["epoch_no"] == -1:
                 raise GluonTSUserError(
                     "Got NaN in first epoch. Try reducing initial learning rate."

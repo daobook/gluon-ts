@@ -120,11 +120,12 @@ class TreePredictor(RepresentablePredictor):
         model=None,
         seed=None,
     ) -> None:
-        assert method in [
+        assert method in {
             "QRX",
             "QuantileRegression",
             "QRF",
-        ], "method has to be either 'QRX', 'QuantileRegression', or 'QRF'"
+        }, "method has to be either 'QRX', 'QuantileRegression', or 'QRF'"
+
         self.method = method
         self.lead_time = lead_time
         self.context_length = (
@@ -159,7 +160,7 @@ class TreePredictor(RepresentablePredictor):
             "prediction "
         )
 
-        self.model_params = model_params if model_params else {}
+        self.model_params = model_params or {}
         self.prediction_length = prediction_length
         self.freq = freq
         self.max_workers = max_workers

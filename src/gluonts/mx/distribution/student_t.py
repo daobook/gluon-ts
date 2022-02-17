@@ -93,8 +93,7 @@ class StudentT(Distribution):
             - F.log(sigma)
         )
 
-        ll = Z - nup1_half * F.log1p(part1)
-        return ll
+        return Z - nup1_half * F.log1p(part1)
 
     def sample(
         self, num_samples: Optional[int] = None, dtype=np.float32
@@ -104,10 +103,9 @@ class StudentT(Distribution):
             gammas = F.sample_gamma(
                 alpha=nu / 2.0, beta=2.0 / (nu * F.square(sigma)), dtype=dtype
             )
-            normal = F.sample_normal(
+            return F.sample_normal(
                 mu=mu, sigma=1.0 / F.sqrt(gammas), dtype=dtype
             )
-            return normal
 
         return _sample_multiple(
             s,

@@ -170,9 +170,9 @@ class TemporalFusionTransformerNetwork(HybridBlock):
         self.n_head = n_head
         self.n_output = n_output
         self.quantiles = sum(
-            [[i / 10, 1.0 - i / 10] for i in range(1, (n_output + 1) // 2)],
-            [0.5],
+            ([i / 10, 1.0 - i / 10] for i in range(1, (n_output + 1) // 2)), [0.5]
         )
+
         self.normalize_eps = 1e-5
 
         self.d_past_feat_dynamic_real = d_past_feat_dynamic_real
@@ -338,11 +338,10 @@ class TemporalFusionTransformerNetwork(HybridBlock):
         )
         past_target = F.expand_dims(past_target, axis=-1)
 
-        past_covariates = []
         future_covariates = []
         static_covariates: List[Tensor] = []
         proj = self.target_proj(past_target)
-        past_covariates.append(proj)
+        past_covariates = [proj]
         if self.past_feat_dynamic_proj is not None:
             projs = self.past_feat_dynamic_proj(past_feat_dynamic_real)
             past_covariates.extend(projs)
@@ -423,9 +422,7 @@ class TemporalFusionTransformerNetwork(HybridBlock):
         decoding = self.temporal_decoder(
             encoding, c_enrichment, past_observed_values
         )
-        preds = self.output_proj(decoding)
-
-        return preds
+        return self.output_proj(decoding)
 
 
 class TemporalFusionTransformerTrainingNetwork(

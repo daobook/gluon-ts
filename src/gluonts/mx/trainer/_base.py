@@ -360,11 +360,7 @@ class Trainer:
                         # forward returns a list in the case of hybrid and a
                         # tuple otherwise we may wrap network outputs in the
                         # future to avoid this type check
-                        if isinstance(output, (list, tuple)):
-                            loss = output[0]
-                        else:
-                            loss = output
-
+                        loss = output[0] if isinstance(output, (list, tuple)) else output
                         batch_size = loss.shape[0]
 
                     if not np.isfinite(ndarray.sum(loss).asscalar()):

@@ -145,12 +145,9 @@ def get_git_archive_version(fallback):
 
     if not refnames.startswith("$Format"):
         refs = refnames.split(", ")
-        tags = [
+        if tags := [
             ref.split("tag: ")[1] for ref in refs if ref.startswith("tag:")
-        ]
-
-        # if there is a tag, we return the first one
-        if tags:
+        ]:
             return tags[0]
 
     commit_hash = "$Format:%h$"

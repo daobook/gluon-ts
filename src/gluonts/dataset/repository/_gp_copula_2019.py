@@ -16,6 +16,7 @@ Loads the datasets used in Salinas et al. 2019 (https://tinyurl.com/woyhhqy).
 This wrapper downloads and unpacks them so they don'thave to be attached as
 large files in GluonTS master.
 """
+
 import json
 import os
 import shutil
@@ -44,7 +45,7 @@ root = "https://raw.githubusercontent.com/mbohlkeschneider/gluon-ts/mv_release/d
 datasets_info = {
     "exchange_rate_nips": GPCopulaDataset(
         name="exchange_rate_nips",
-        url=root + "exchange_rate_nips.tar.gz",
+        url=f'{root}exchange_rate_nips.tar.gz',
         num_series=8,
         prediction_length=30,
         freq="B",
@@ -53,8 +54,7 @@ datasets_info = {
     ),
     "electricity_nips": GPCopulaDataset(
         name="electricity_nips",
-        url=root + "electricity_nips.tar.gz",
-        # original dataset can be found at https://archive.ics.uci.edu/ml/datasets/ElectricityLoadDiagrams20112014#
+        url=f'{root}electricity_nips.tar.gz',
         num_series=370,
         prediction_length=24,
         freq="H",
@@ -63,8 +63,7 @@ datasets_info = {
     ),
     "traffic_nips": GPCopulaDataset(
         name="traffic_nips",
-        url=root + "traffic_nips.tar.gz",
-        # note there are 963 in the original dataset from https://archive.ics.uci.edu/ml/datasets/PEMS-SF
+        url=f'{root}traffic_nips.tar.gz',
         num_series=963,
         prediction_length=24,
         freq="H",
@@ -73,7 +72,7 @@ datasets_info = {
     ),
     "solar_nips": GPCopulaDataset(
         name="solar-energy",
-        url=root + "solar_nips.tar.gz",
+        url=f'{root}solar_nips.tar.gz',
         num_series=137,
         prediction_length=24,
         freq="H",
@@ -93,7 +92,7 @@ datasets_info = {
     ),
     "taxi_30min": GPCopulaDataset(
         name="taxi_30min",
-        url=root + "taxi_30min.tar.gz",
+        url=f'{root}taxi_30min.tar.gz',
         num_series=1214,
         prediction_length=24,
         freq="30min",

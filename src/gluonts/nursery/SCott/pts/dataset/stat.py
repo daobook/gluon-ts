@@ -57,8 +57,7 @@ class ScaleHistogram:
     def bucket_index(self, target_values):
         assert len(target_values) > 0
         scale = np.mean(np.abs(target_values))
-        scale_bin = int(math.log(scale + 1.0, self._base))
-        return scale_bin
+        return int(math.log(scale + 1.0, self._base))
 
     def add(self, target_values):
         if len(target_values) > 0:
@@ -361,12 +360,8 @@ def calculate_dataset_statistics(ts_dataset: Any) -> DatasetStatistics:
         mean_target_length=mean_target_length,
         min_target=min_target,
         num_missing_values=num_missing_values,
-        feat_static_real=observed_feat_static_real
-        if observed_feat_static_real
-        else [],
-        feat_static_cat=observed_feat_static_cat
-        if observed_feat_static_cat
-        else [],
+        feat_static_real=observed_feat_static_real or [],
+        feat_static_cat=observed_feat_static_cat or [],
         num_feat_dynamic_real=num_feat_dynamic_real,
         num_feat_dynamic_cat=num_feat_dynamic_cat,
         num_time_observations=num_time_observations,

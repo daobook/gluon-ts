@@ -35,14 +35,7 @@ def calculate_seasonal_error(
     if not seasonality:
         seasonality = get_seasonality(forecast.freq)
 
-    if seasonality < len(past_data):
-        forecast_freq = seasonality
-    else:
-        # edge case: the seasonal freq is larger than the length of ts
-        # revert to freq=1
-        # logging.info('The seasonal frequency is larger than the length of the time series. Reverting to freq=1.')
-        forecast_freq = 1
-
+    forecast_freq = seasonality if seasonality < len(past_data) else 1
     y_t = past_data[:-forecast_freq]
     y_tm = past_data[forecast_freq:]
 
